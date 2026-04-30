@@ -1214,3 +1214,79 @@
                 el("div", {}, [ el("code", {}, ["/api/vault/<id>/allocation"]), " allocation hint request" ]),
                 el("div", {}, [ el("code", {}, ["/api/price/<sym>/series"]), " market sparkline" ]),
               ])
+            ]),
+            el("div", { class:"card" }, [
+              el("h3", {}, ["Security posture"]),
+              el("div", { class:"small muted" }, [
+                el("div", {}, ["Jaja disables remote writes by default (localhost-only)."]),
+                el("div", {}, ["WasuXir stores API base & key in localStorage (client-side)."]),
+                el("div", {}, ["Use a dedicated browser profile if you want extra separation."]),
+              ])
+            ])
+          ])
+        ])
+      ]);
+      return pane;
+    };
+
+    const sidebar = () => {
+      const vItems = (S.vaults || []).slice(0, 12);
+      const vaultLinks = vItems.map((v, i) => {
+        const k = String(v.asset_symbol || "VL").slice(0,2).toUpperCase();
+        const sub = `${String(v.chain||"")}`.slice(0, 28);
+        const hash = "#vault/" + encodeURIComponent(v.id) + "/overview";
+        const active = location.hash.startsWith("#vault/" + encodeURIComponent(v.id));
+        return el("a", { href: hash, class: active ? "active" : "", onclick: () => setSelectedVault(v.id) }, [
+          el("div", { class:"k" }, [k]),
+          el("div", { class:"t" }, [
+            el("b", {}, [String(v.name || "Vault")]),
+            el("span", {}, [sub])
+          ])
+        ]);
+      });
+
+      return el("div", { class:"panel" }, [
+        el("div", { class:"hd" }, [
+          el("div", {}, [
+            el("div", { class:"title" }, ["Navigation"]),
+            el("div", { class:"hint" }, ["Workspace + vault shortcuts"])
+          ]),
+          el("button", { class:"btn ghost", onclick: async () => { await boot(); toast("ok","Updated","Vault list refreshed."); }}, ["↻"])
+        ]),
+        el("div", { class:"nav" }, [
+          navItem("#dashboard","DB","Dashboard","Vault snapshot + health"),
+          navItem("#settings","ST","Settings","API base + key"),
+          navItem("#docs","DX","Docs","How to use"),
+          el("div", { style:"height:1px;background:rgba(255,255,255,.10);margin:8px 6px" }, []),
+          el("div", { class:"muted small", style:"padding:0 8px 6px" }, ["Vaults"]),
+          ...(vaultLinks.length ? vaultLinks : [ el("div", { class:"muted small", style:"padding:0 8px 10px" }, ["No vaults loaded yet."]) ])
+        ])
+      ]);
+    };
+
+    const topbar = () => {
+      const h = S.lastHealth;
+      const dotCls = h ? "dot ok" : (S.lastError ? "dot bad" : "dot warn");
+      const statusText = h ? ("Jaja OK · " + (h.platform || "platform")) : (S.lastError ? ("Offline · " + S.lastError) : "Not checked");
+      const meText = S.me ? (S.me.email || "api_key") : "anon";
+      return el("div", { class:"topbar" }, [
+        el("div", { class:"brand" }, [
+          el("div", { class:"logo" }, []),
+          el("div", {}, [
+            el("h1", {}, ["WasuXir"]),
+            el("p", { class:"sub" }, ["AI investment vault interface · ", el("span", { class:"mono" }, [meText])])
+          ])
+        ]),
+        el("div", { class:"top-actions" }, [
+          el("div", { class:"pill" }, [
+            el("span", { class: dotCls }, []),
+            el("span", { class:"small muted" }, [statusText])
+          ]),
+          el("button", { class:"btn", onclick: async () => {
+            const ok = await healthCheck();
+            if (ok) toast("ok","Health","Connected.");
+            else toast("bad","Health","Offline.");
+            render();
+          }}, ["Health"]),
+          el("button", { class:"btn primary", onclick: async () => {
+            try{
