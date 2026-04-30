@@ -1138,3 +1138,79 @@
               localStorage.removeItem("wasuxir.apiKey");
               localStorage.removeItem("wasuxir.selectedVaultId");
               S.apiBase=""; S.apiKey=""; S.selectedVaultId=""; S.me=null; S.csrf="";
+              toast("warn","Reset","Local settings cleared.");
+              render();
+            }}, ["Reset"])
+          ])
+        ]),
+        el("div", { class:"bd" }, [
+          el("div", { class:"grid2" }, [
+            el("div", { class:"card" }, [
+              el("h3", {}, ["API base"]),
+              el("div", { class:"muted small" }, ["Leave empty when served from Jaja; set for remote Jaja URL."]),
+              el("div", { style:"margin-top:10px" }, [
+                el("input", { value: S.apiBase, oninput: (e) => setApiBase(e.target.value), placeholder:"http://127.0.0.1:8787" })
+              ])
+            ]),
+            el("div", { class:"card" }, [
+              el("h3", {}, ["API key"]),
+              el("div", { class:"muted small" }, ["Header ", el("code", {}, ["X-Jaja-ApiKey"]), " will be attached to all API calls."]),
+              el("div", { style:"margin-top:10px" }, [
+                el("input", { value: S.apiKey, oninput: (e) => setApiKey(e.target.value), placeholder:"paste key" })
+              ]),
+              el("div", { style:"display:flex;gap:10px;flex-wrap:wrap;margin-top:10px" }, [
+                el("button", { class:"btn primary", onclick: async () => {
+                  await boot();
+                  toast("ok","Loaded","Vaults loaded.");
+                }}, ["Load vaults"]),
+                el("button", { class:"btn", onclick: async () => {
+                  const ok = await healthCheck();
+                  toast(ok ? "ok":"bad", ok ? "Connected":"Offline", ok ? "Health OK" : (S.lastError || "error"));
+                  render();
+                }}, ["Test health"])
+              ])
+            ]),
+          ]),
+          el("div", { class:"card", style:"margin-top:12px" }, [
+            el("h3", {}, ["Advanced"]),
+            el("div", { class:"muted small" }, [
+              "If you use browser-session auth instead of API key, make sure you’re logged into Jaja in the same origin and WasuXir will pull CSRF from `/api/me`."
+            ])
+          ])
+        ])
+      ]);
+      return pane;
+    };
+
+    const viewDocs = () => {
+      const pane = el("div", { class:"panel" }, [
+        el("div", { class:"hd" }, [
+          el("div", {}, [
+            el("div", { class:"title" }, ["Docs"]),
+            el("div", { class:"hint" }, ["How WasuXir and Jaja work together."])
+          ]),
+          el("div", { style:"display:flex;gap:8px;align-items:center" }, [
+            el("a", { class:"btn", href:"#settings" }, ["Settings"])
+          ])
+        ]),
+        el("div", { class:"bd" }, [
+          el("div", { class:"card" }, [
+            el("h3", {}, ["Quick start"]),
+            el("div", { class:"small muted" }, [
+              el("div", {}, ["1) Start Jaja backend (`python Jaja/app.py`)."]),
+              el("div", {}, ["2) Create API key in Jaja: Home → API keys → New key."]),
+              el("div", {}, ["3) Open WasuXir (this page) and paste the API key in Settings or Welcome."]),
+              el("div", {}, ["4) Select a vault → Signals → Allocation → Backtest."]),
+            ])
+          ]),
+          el("div", { class:"grid2", style:"margin-top:12px" }, [
+            el("div", { class:"card" }, [
+              el("h3", {}, ["Endpoints used"]),
+              el("div", { class:"small muted" }, [
+                el("div", {}, [ el("code", {}, ["/health"]), " connectivity check" ]),
+                el("div", {}, [ el("code", {}, ["/api/me"]), " auth + CSRF discovery" ]),
+                el("div", {}, [ el("code", {}, ["/api/vaults"]), " vault catalog" ]),
+                el("div", {}, [ el("code", {}, ["/api/vault/<id>/signals"]), " signal feed" ]),
+                el("div", {}, [ el("code", {}, ["/api/vault/<id>/allocation"]), " allocation hint request" ]),
+                el("div", {}, [ el("code", {}, ["/api/price/<sym>/series"]), " market sparkline" ]),
+              ])
