@@ -682,3 +682,79 @@
     };
 
     const vaultById = (id) => (S.vaults || []).find(v => String(v.id) === String(id));
+
+    const viewDashboard = () => {
+      const v = vaultById(S.selectedVaultId) || (S.vaults[0] || null);
+      const cap = v ? Number(v.deposit_cap || 0) : 0;
+      const fees = v ? `${Number(v.mgmt_fee_bps_per_year||0)} / ${Number(v.perf_fee_bps||0)} bps` : "n/a";
+      const status = v ? String(v.status || "n/a") : "n/a";
+      const tone = status === "active" ? "good" : status === "paused" ? "warn" : "accent";
+
+      const pane = el("div", { class: "panel" }, [
+        el("div", { class: "hd" }, [
+          el("div", {}, [
+            el("div", { class: "title" }, ["Dashboard"]),
+            el("div", { class: "hint" }, ["Snapshot: vault cap, fees, health, and market sparkline."])
+          ]),
+          el("div", { style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap" }, [
+            el("button", { class: "btn", onclick: async () => { await boot(); toast("ok","Refreshed","Vaults refreshed."); }}, ["Refresh"]),
+            el("a", { class: "btn primary", href: "#vault/" + encodeURIComponent(S.selectedVaultId || "") + "/overview" }, ["Open vault"])
+          ])
+        ]),
+        el("div", { class: "bd" }, [
+          el("div", { class: "grid3" }, [
+            cardKpi("Selected vault", v ? (v.name || v.id) : "None", v ? (v.chain || "") : "Load vaults first.", tone),
+            cardKpi("Deposit cap", v ? "$" + fmtMoney(cap) : "n/a", "Blueprint capacity used for signals & allocation hints.", "accent"),
+            cardKpi("Fees (mgmt/perf)", fees, "Used in risk budget heuristic; not an onchain value here.", "warn"),
+          ]),
+          el("div", { class: "grid2", style: "margin-top:12px" }, [
+            el("div", { class: "card" }, [
+              el("h3", {}, ["Connectivity"]),
+              el("div", { class: "kv small", style: "margin-top:10px" }, [
+                el("div", {}, ["Health"]),
+                el("div", {}, [ S.lastHealth ? el("span", { class: "tag good" }, ["OK"]) : el("span", { class: "tag bad" }, ["OFF"]) ]),
+                el("div", {}, ["User"]),
+                el("div", {}, [ S.me ? el("span", { class: "tag accent" }, [S.me.email || "api_key"]) : el("span", { class: "tag warn" }, ["anon"]) ]),
+                el("div", {}, ["Selected"]),
+                el("div", {}, [ v ? el("span", { class: "mono" }, [String(v.id)]) : el("span", { class: "muted" }, ["n/a"]) ]),
+              ])
+            ]),
+            el("div", { class: "card" }, [
+              el("h3", {}, ["Market spark (sim)"]),
+              el("div", { class: "muted small" }, ["ETH 30d hourly series, rendered locally."]),
+              el("div", { class: "spark", style: "margin-top:10px" }, [
+                el("canvas", { id: "spark-eth" }, []),
+                el("div", { class: "m" }, [
+                  el("b", {}, ["ETH"]),
+                  el("span", { class: "muted" }, ["Fetched from Jaja /api/price/ETH/series"])
+                ])
+              ])
+            ]),
+          ]),
+          el("div", { class: "footer" }, [
+            el("div", {}, ["Tip: use ", el("code", {}, ["#vault/<id>/signals"]), " to drill into signals."]),
+            el("div", { class: "links" }, [
+              el("a", { href: "#settings" }, ["Settings"]),
+              el("span", { class: "muted2" }, ["·"]),
+              el("a", { href: "#docs" }, ["Docs"])
+            ])
+          ])
+        ])
+      ]);
+
+      // Defer chart draw
+      setTimeout(async () => {
+        try{
+          const pts = await loadPriceSeries("ETH", 30, 3600);
+          drawSpark(document.getElementById("spark-eth"), pts, "#77c0ff");
+        }catch(e){}
+      }, 10);
+
+      return pane;
+    };
+
+    const viewVaultOverview = (vaultId) => {
+      const v = vaultById(vaultId);
+      if (!v) return el("div", { class: "panel" }, [ el("div", { class: "bd" }, [ el("div", { class: "card" }, ["Unknown vault."]) ]) ]);
+
+      const bd = el("div", { class: "bd" }, []);
